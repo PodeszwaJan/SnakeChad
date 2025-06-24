@@ -9,7 +9,7 @@ env/
 
 # Visual Studio files
 *.sln
-.vs/
+
 
 # Git folder (not ignored, but listed for clarity)
 !.git/
