@@ -3,6 +3,12 @@ import sys
 import os
 import torch
 from train import train_snake
+import tkinter as tk
+from tkinter import simpledialog
+
+# Initialize tkinter root for dialogs and hide it
+root = tk.Tk()
+root.withdraw()
 
 pygame.init()
 
@@ -22,14 +28,15 @@ menu_items = [
     'Start InRealTime (Visible)',
     'Start InBackground (Fast Training)',
     'Select Existing Model',
-    'Start With a New Model',
+    'Create and Train a New Model',
     'Set Number of Episodes',
     'Select Model Type (DQN/DDQN)',
     'Exit'
 ]
 
 selected = 0
-model_path = None
+model_to_load = None
+save_filename = "new_model.pth" # Default name for a new model
 max_episodes = 100
 model_type = "DQN"  # Default model type
 models = []
@@ -62,12 +69,12 @@ def draw_menu():
         text = SMALL_FONT.render(item, True, color)
         screen.blit(text, (WIDTH//2 - text.get_width()//2, 100 + i*40))
 
-    # Display info about the selected model, episode count, and model type
-    if model_path:
-        model_info_text = f'Model: {os.path.basename(model_path)}'
+    # Display info about the model, episodes, and model type
+    if model_to_load:
+        model_info_text = f'Loading from: {os.path.basename(model_to_load)}'
     else:
-        model_info_text = 'Model: (A new model will be created)'
-    
+        model_info_text = f'Saving new model as: {save_filename}'
+
     info = SMALL_FONT.render(model_info_text, True, YELLOW)
     screen.blit(info, (10, HEIGHT-90))
     
@@ -104,17 +111,30 @@ def draw_model_type_menu():
     screen.blit(title, (WIDTH//2 - title.get_width()//2, 30))
 
     model_types = ["DQN", "DDQN"]
+    current_idx = model_types.index(model_type)
     
     for i, mtype in enumerate(model_types):
-        color = BLUE if mtype == model_type else WHITE
+        color = BLUE if i == current_idx else WHITE
         text = SMALL_FONT.render(mtype, True, color)
         screen.blit(text, (WIDTH//2 - text.get_width()//2, 150 + i*50))
         
     pygame.display.flip()
 
+def get_new_model_name_input():
+    """Opens a dialog to get the filename for a new model."""
+    try:
+        name = simpledialog.askstring("New Model Name", "Enter a name for the new model file:", parent=root)
+        if name:
+            if not name.endswith('.pth'):
+                name += '.pth'
+            return name
+    except Exception:
+        pass
+    return None
+
 def menu_loop():
     """Main loop for handling menu navigation and actions."""
-    global selected, model_path, max_episodes, selected_model_idx, model_type
+    global selected, model_to_load, max_episodes, selected_model_idx, model_type, save_filename
     
     refresh_models() # Initial scan for models
 
@@ -136,8 +156,11 @@ def menu_loop():
                         run_game(render_mode=False)
                     elif selected == 2:  # Select Model
                         choose_model()
-                    elif selected == 3:  # New Model
-                        model_path = None # This now works as intended
+                    elif selected == 3:  # Create New Model
+                        new_name = get_new_model_name_input()
+                        if new_name:
+                            model_to_load = None
+                            save_filename = new_name
                     elif selected == 4:  # Number of Episodes
                         max_episodes = get_episodes_input()
                     elif selected == 5:  # Model Type
@@ -148,8 +171,8 @@ def menu_loop():
 
 def choose_model():
     """Loop for the model selection screen."""
-    global selected_model_idx, model_path
-    refresh_models() # Refresh model list every time we enter this screen
+    global selected_model_idx, model_to_load, save_filename
+    refresh_models()
     choosing = True
     while choosing:
         draw_models_menu()
@@ -164,7 +187,9 @@ def choose_model():
                     selected_model_idx = (selected_model_idx + 1) % max(1, len(models))
                 elif event.key == pygame.K_RETURN:
                     if models:
-                        model_path = models[selected_model_idx]
+                        chosen_model = models[selected_model_idx]
+                        model_to_load = chosen_model
+                        save_filename = chosen_model
                     choosing = False
                 elif event.key == pygame.K_ESCAPE:
                     choosing = False
@@ -180,48 +205,49 @@ def choose_model_type():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    model_type = "DQN" if model_type == "DDQN" else "DDQN"
-                elif event.key == pygame.K_DOWN:
-                    model_type = "DQN" if model_type == "DDQN" else "DDQN"
-                elif event.key == pygame.K_RETURN:
-                    choosing = False
-                elif event.key == pygame.K_ESCAPE:
+                if event.key in [pygame.K_UP, pygame.K_DOWN]:
+                    model_type = "DDQN" if model_type == "DQN" else "DQN"
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_ESCAPE:
                     choosing = False
 
 def get_episodes_input():
     """Opens a dialog box to get the number of episodes from the user."""
-    import tkinter as tk
-    from tkinter import simpledialog
-    root = tk.Tk()
-    root.withdraw()
     try:
-        value = simpledialog.askinteger('Episodes', 'Enter the number of episodes:', minvalue=1, maxvalue=100000)
+        value = simpledialog.askinteger('Episodes', 'Enter the number of episodes:', minvalue=1, maxvalue=100000, parent=root)
         return value if value else 100
     except Exception:
         return 100
-    finally:
-        root.destroy()
 
 def run_game(render_mode):
     """Starts the training process and handles pre/post-training setup."""
-    global model_path, max_episodes, model_type
+    global model_to_load, max_episodes, model_type, save_filename
     if render_mode:
         try:
             pygame.mixer.init()
             pygame.mixer.music.load(MUSIC_FILE)
-            pygame.mixer.music.play(-1)  # Loop indefinitely
+            pygame.mixer.music.play(-1)
         except Exception as e:
             print(f'Could not play music: {e}')
     
-    pygame.display.iconify()  # Minimize menu window during training
-    train_snake(render_mode=render_mode, model_path=model_path, max_episodes=max_episodes, model_type=model_type)
+    pygame.display.iconify()
+    train_snake(
+        render_mode=render_mode, 
+        model_path=model_to_load, 
+        max_episodes=max_episodes, 
+        model_type=model_type,
+        save_filename=save_filename
+    )
     
     if render_mode:
         pygame.mixer.music.stop()
     
-    pygame.display.set_mode((WIDTH, HEIGHT))  # Restore menu window
-    refresh_models() # Refresh model list after training in case new ones were saved
+    pygame.display.set_mode((WIDTH, HEIGHT))
+    refresh_models()
 
 if __name__ == '__main__':
-    menu_loop()
+    try:
+        menu_loop()
+    finally:
+        root.destroy()
+        pygame.quit()
+        sys.exit()
