@@ -1,0 +1,42 @@
+Architektura sieci neuronowej (LinearQNet)
+Wasza sieć to prosty perceptron wielowarstwowy z:
+Warstwa wejściowa: input_size neuronów (stan gry)
+Warstwa ukryta: hidden_size neuronów (domyślnie 128) z aktywacją ReLU
+Warstwa wyjściowa: output_size neuronów (liczba możliwych akcji)
+Agent DQN - kluczowe komponenty
+1. Inicjalizacja i parametry
+Parametry:
+gamma = 0.9: współczynnik dyskontowania - określa jak ważne są przyszłe nagrody
+epsilon = 1.0: współczynnik eksploracji - prawdopodobieństwo losowego działania
+memory_size = 100_000: pamięć doświadczeń (Experience Replay Buffer)
+batch_size = 1000: rozmiar batcha do treningu
+2. Wybór akcji (Exploration vs Exploitation)
+Logika wyboru akcji:
+Eksploracja (ε-greedy): z prawdopodobieństwem epsilon wybiera losową akcję
+Eksploatacja: z prawdopodobieństwem 1-epsilon wybiera akcję o najwyższej wartości Q
+3. Pamięć doświadczeń
+Zapisuje krotki (state, action, reward, next_state, done) w buforze pamięci. To kluczowe dla Experience Replay - techniki stabilizującej trening DQN.
+4. Trening - kluczowa część algorytmu
+Trening z pamięci długoterminowej:
+Losuje próbkę z pamięci i trenuje na niej.
+Trening z pamięci krótkoterminowej:
+Trenuje natychmiast na pojedynczym doświadczeniu.
+5. Algorytm Q-Learning - serce modelu
+Kluczowe równanie Q-Learning:
+Apply to dqn_agent.py
+Gdzie:
+Q(s,a) - wartość akcji a w stanie s
+r - natychmiastowa nagroda
+γ - współczynnik dyskontowania (0.9)
+max Q(s',a') - maksymalna wartość Q w następnym stanie
+6. Aktualizacja eksploracji
+Stopniowo zmniejsza eksplorację (epsilon *= 0.995) aż do minimum (0.01).
+Jak to wszystko działa razem:
+Agent obserwuje stan gry → przekazuje do sieci
+Sieć przewiduje wartości Q dla wszystkich akcji
+Agent wybiera akcję (eksploracja lub eksploatacja)
+Wykonuje akcję i otrzymuje nagrodę + nowy stan
+Zapisuje doświadczenie w pamięci
+Trenuje sieć używając równania Bellmana
+Aktualizuje epsilon dla mniejszej eksploracji
+Cel: Sieć uczy się przewidywać optymalne wartości Q dla każdego stanu i akcji, co pozwala agentowi wybierać najlepsze ruchy w grze Snake.
