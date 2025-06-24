@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments (if any)
+venv/
+env/
+
+# Visual Studio files
+*.sln
+.vs/
+
+# Git folder (not ignored, but listed for clarity)
+!.git/
+
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python-related
+*.log
+*.egg-info/
+
+# Ignore requirements lock files (if not using them)
+poetry.lock
+Pipfile.lock
+
+# Jupyter Notebook checkpoints (if any)
+.ipynb_checkpoints/
