@@ -24,7 +24,7 @@ class ExcelLogger:
         
         # Define and write headers
         self.headers = [
-            "Episode", "Score", "Best Score", "Epsilon", "Total Reward", "Steps"
+            "Episode", "Score", "Best Score", "Epsilon", "Total Reward", "Steps", "Model Type", "Model Name"
         ]
         self._write_header()
 
