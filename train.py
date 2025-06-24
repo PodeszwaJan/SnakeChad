@@ -1,6 +1,7 @@
 import os
 from snake_game import SnakeGame
 from dqn_agent import DQNAgent
+from excel_logger import ExcelLogger  # <-- ADDED
 import numpy as np
 import pygame
 
@@ -11,6 +12,11 @@ def train_snake(render_mode=False, model_path=None, max_episodes=100):
     agent = DQNAgent(state_size, action_size)
     scores = []
     best_score = 0
+    logger = None
+
+    # Initialize logger only for background training
+    if not render_mode:
+        logger = ExcelLogger()
 
     # Możliwość wczytania modelu
     if model_path:
@@ -43,11 +49,29 @@ def train_snake(render_mode=False, model_path=None, max_episodes=100):
             best_score = score
             agent.save("best_model.pth", best_score)
         agent.save("last_model.pth", best_score)
+        
         print(f"Episode {episode} | Score: {score} | Best: {best_score} | Epsilon: {agent.epsilon:.3f}")
+        
+        # Log to Excel if in background mode
+        if logger:
+            log_data = {
+                "Episode": episode,
+                "Score": score,
+                "Best Score": best_score,
+                "Epsilon": agent.epsilon,
+                "Total Reward": total_reward,
+                "Steps": game.frame_iteration
+            }
+            logger.log_episode(log_data)
+
     print(f"Average score over {max_episodes} episodes: {np.mean(scores):.2f}")
+
+    # Save the Excel file at the end of training
+    if logger:
+        logger.save()
 
 if __name__ == "__main__":
     # Prosty wybór trybu przez konsolę (na potrzeby testów)
     mode = input("Wybierz tryb: 1 - InRealTime, 2 - InBackground: ").strip()
     model_path = input("Podaj ścieżkę do pliku modelu (enter = nowy model): ").strip()
-    train_snake(render_mode=(mode=="1"), model_path=(model_path if model_path else None), max_episodes=100) 
+    train_snake(render_mode=(mode=="1"), model_path=(model_path if model_path else None), max_episodes=100)

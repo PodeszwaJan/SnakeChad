@@ -14,7 +14,6 @@ env/
 # Git folder (not ignored, but listed for clarity)
 !.git/
 
-
 # System files
 .DS_Store
 Thumbs.db
