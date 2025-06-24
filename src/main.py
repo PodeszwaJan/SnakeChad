@@ -6,6 +6,11 @@ from train import train_snake
 import tkinter as tk
 from tkinter import simpledialog
 
+# --- Define paths relative to the project root ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(PROJECT_ROOT, 'models')
+ASSETS_DIR = os.path.join(PROJECT_ROOT, 'assets')
+
 # Initialize tkinter root for dialogs and hide it
 root = tk.Tk()
 root.withdraw()
@@ -19,7 +24,7 @@ YELLOW = (255, 255, 0)
 BLUE = (0, 128, 255)
 FONT = pygame.font.SysFont('arial', 32)
 SMALL_FONT = pygame.font.SysFont('arial', 24)
-MUSIC_FILE = 'beethoven.mp3'  # Make sure this file is in the directory
+MUSIC_FILE = os.path.join(ASSETS_DIR, 'beethoven.mp3')
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Snake RL - Menu')
@@ -30,28 +35,31 @@ menu_items = [
     'Select Existing Model',
     'Create and Train a New Model',
     'Set Number of Episodes',
-    'Select Model Type (DQN/DDQN)',
+    'Select Model Type (DQN/DDQN/ADQN)', # <-- MODIFIED
     'Exit'
 ]
 
 selected = 0
 model_to_load = None
-save_filename = "new_model.pth" # Default name for a new model
+save_filename = "new_model.pth"
 max_episodes = 100
-model_type = "DQN"  # Default model type
+model_type = "DQN"
 models = []
 models_scores = []
 selected_model_idx = 0
+model_types = ["DQN", "DDQN", "ADQN"] # <-- MODIFIED
 
 def refresh_models():
-    """Scans the directory for .pth model files and their scores."""
+    """Scans the models directory for .pth files and their scores."""
     global models, models_scores
     models.clear()
     models_scores.clear()
-    for fname in os.listdir('.'):
+    if not os.path.exists(MODELS_DIR):
+        os.makedirs(MODELS_DIR)
+    for fname in os.listdir(MODELS_DIR):
         if fname.endswith('.pth'):
             try:
-                checkpoint = torch.load(fname)
+                checkpoint = torch.load(os.path.join(MODELS_DIR, fname))
                 score = checkpoint.get('best_score', 0)
                 models.append(fname)
                 models_scores.append(score)
@@ -69,7 +77,6 @@ def draw_menu():
         text = SMALL_FONT.render(item, True, color)
         screen.blit(text, (WIDTH//2 - text.get_width()//2, 100 + i*40))
 
-    # Display info about the model, episodes, and model type
     if model_to_load:
         model_info_text = f'Loading from: {os.path.basename(model_to_load)}'
     else:
@@ -110,13 +117,12 @@ def draw_model_type_menu():
     title = FONT.render('Select Model Type', True, YELLOW)
     screen.blit(title, (WIDTH//2 - title.get_width()//2, 30))
 
-    model_types = ["DQN", "DDQN"]
-    current_idx = model_types.index(model_type)
+    current_idx = model_types.index(model_type) # <-- MODIFIED
     
-    for i, mtype in enumerate(model_types):
+    for i, mtype in enumerate(model_types): # <-- MODIFIED
         color = BLUE if i == current_idx else WHITE
         text = SMALL_FONT.render(mtype, True, color)
-        screen.blit(text, (WIDTH//2 - text.get_width()//2, 150 + i*50))
+        screen.blit(text, (WIDTH//2 - text.get_width()//2, 150 + i*40))
         
     pygame.display.flip()
 
@@ -136,7 +142,7 @@ def menu_loop():
     """Main loop for handling menu navigation and actions."""
     global selected, model_to_load, max_episodes, selected_model_idx, model_type, save_filename
     
-    refresh_models() # Initial scan for models
+    refresh_models()
 
     while True:
         draw_menu()
@@ -150,22 +156,17 @@ def menu_loop():
                 elif event.key == pygame.K_DOWN:
                     selected = (selected + 1) % len(menu_items)
                 elif event.key == pygame.K_RETURN:
-                    if selected == 0:  # InRealTime
-                        run_game(render_mode=True)
-                    elif selected == 1:  # InBackground
-                        run_game(render_mode=False)
-                    elif selected == 2:  # Select Model
-                        choose_model()
-                    elif selected == 3:  # Create New Model
+                    if selected == 0: run_game(render_mode=True)
+                    elif selected == 1: run_game(render_mode=False)
+                    elif selected == 2: choose_model()
+                    elif selected == 3:
                         new_name = get_new_model_name_input()
                         if new_name:
                             model_to_load = None
                             save_filename = new_name
-                    elif selected == 4:  # Number of Episodes
-                        max_episodes = get_episodes_input()
-                    elif selected == 5:  # Model Type
-                        choose_model_type()
-                    elif selected == 6:  # Exit
+                    elif selected == 4: max_episodes = get_episodes_input()
+                    elif selected == 5: choose_model_type()
+                    elif selected == 6:
                         pygame.quit()
                         sys.exit()
 
@@ -181,23 +182,21 @@ def choose_model():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    selected_model_idx = (selected_model_idx - 1) % max(1, len(models))
-                elif event.key == pygame.K_DOWN:
-                    selected_model_idx = (selected_model_idx + 1) % max(1, len(models))
+                if event.key == pygame.K_UP: selected_model_idx = (selected_model_idx - 1) % max(1, len(models))
+                elif event.key == pygame.K_DOWN: selected_model_idx = (selected_model_idx + 1) % max(1, len(models))
                 elif event.key == pygame.K_RETURN:
                     if models:
                         chosen_model = models[selected_model_idx]
                         model_to_load = chosen_model
                         save_filename = chosen_model
                     choosing = False
-                elif event.key == pygame.K_ESCAPE:
-                    choosing = False
+                elif event.key == pygame.K_ESCAPE: choosing = False
 
 def choose_model_type():
     """Loop for the model type selection screen."""
     global model_type
     choosing = True
+    current_idx = model_types.index(model_type)
     while choosing:
         draw_model_type_menu()
         for event in pygame.event.get():
@@ -205,10 +204,13 @@ def choose_model_type():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_UP, pygame.K_DOWN]:
-                    model_type = "DDQN" if model_type == "DQN" else "DQN"
+                if event.key == pygame.K_UP:
+                    current_idx = (current_idx - 1) % len(model_types)
+                elif event.key == pygame.K_DOWN:
+                    current_idx = (current_idx + 1) % len(model_types)
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_ESCAPE:
                     choosing = False
+                model_type = model_types[current_idx]
 
 def get_episodes_input():
     """Opens a dialog box to get the number of episodes from the user."""
@@ -230,16 +232,9 @@ def run_game(render_mode):
             print(f'Could not play music: {e}')
     
     pygame.display.iconify()
-    train_snake(
-        render_mode=render_mode, 
-        model_path=model_to_load, 
-        max_episodes=max_episodes, 
-        model_type=model_type,
-        save_filename=save_filename
-    )
+    train_snake(render_mode=render_mode, model_path=model_to_load, max_episodes=max_episodes, model_type=model_type, save_filename=save_filename)
     
-    if render_mode:
-        pygame.mixer.music.stop()
+    if render_mode: pygame.mixer.music.stop()
     
     pygame.display.set_mode((WIDTH, HEIGHT))
     refresh_models()
