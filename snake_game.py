@@ -17,6 +17,8 @@ class SnakeGame:
         self.h = h
         self.block_size = block_size
         self.render_mode = render_mode
+        self.display = None
+        self.clock = None
         if self.render_mode:
             pygame.init()
             self.display = pygame.display.set_mode((self.w * self.block_size, self.h * self.block_size))
@@ -113,10 +115,6 @@ class SnakeGame:
         self.display.blit(text, [0, 0])
         pygame.display.flip()
         self.clock.tick(100)  # FPS
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
 
     def step(self, action):
         self.frame_iteration += 1
@@ -146,6 +144,7 @@ class SnakeGame:
 
         reward = 0
         game_over = False
+        # Check for collision or if the snake is stuck in a loop
         if self._is_collision(new_head) or self.frame_iteration > 100 * len(self.snake):
             game_over = True
             reward = -10
@@ -167,6 +166,9 @@ class SnakeGame:
         if self.render_mode:
             paused = True
             font = pygame.font.SysFont('arial', 40)
+            pause_text = font.render('PAUSED (Press P to Resume)', True, (255,255,0))
+            text_rect = pause_text.get_rect(center=(self.w * self.block_size // 2, self.h * self.block_size // 2))
+
             while paused:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -175,9 +177,7 @@ class SnakeGame:
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_p:
                             paused = False
-                self.display.blit(font.render('PAUZA (P aby wznowić)', True, (255,255,0)), [self.w * self.block_size // 4, self.h * self.block_size // 2])
+                
+                self.display.blit(pause_text, text_rect)
                 pygame.display.flip()
                 self.clock.tick(5)
-
-    def restart(self):
-        return self.reset() 

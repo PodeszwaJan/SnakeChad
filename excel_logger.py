@@ -52,4 +52,4 @@ class ExcelLogger:
     def save(self):
         """Saves the workbook to the specified file."""
         self.workbook.save(self.filename)
-        print(f"\nDane treningowe zapisano w pliku: {self.filename}")
+        print(f"\nTraining data saved to: {self.filename}")
